@@ -14,6 +14,23 @@ import (
 // at a time.
 const maxSendfileSize int = 4 << 20
 
+// is this a socket?
+func getFd(r io.Reader) (*netFD, bool) {
+	switch r := r.(type) {
+	case *UnixConn:
+		return r.fd, true
+	case *TCPConn:
+		return r.fd, true
+
+	// TODO(pmh/maybe): support
+	// for UDPConn under certain
+	// circumstances.
+
+	default:
+		return nil, false
+	}
+}
+
 // sendFile copies the contents of r to c using the sendfile
 // system call to minimize copies.
 //
@@ -24,13 +41,26 @@ const maxSendfileSize int = 4 << 20
 func sendFile(c *netFD, r io.Reader) (written int64, err error, handled bool) {
 	var remain int64 = 1 << 62 // by default, copy until EOF
 
+	isFixed := false
 	lr, ok := r.(*io.LimitedReader)
 	if ok {
+		isFixed = true
 		remain, r = lr.N, lr.R
 		if remain <= 0 {
 			return 0, nil, true
 		}
 	}
+
+	// if this is a network connection,
+	// we can use splice
+	if nfd, ok := getFd(r); ok {
+		amt := int64(-1)
+		if isFixed {
+			amt = remain
+		}
+		return splice(c, nfd, amt)
+	}
+
 	f, ok := r.(*os.File)
 	if !ok {
 		return 0, nil, false
