@@ -37,19 +37,14 @@ func splice(dst *netFD, src *netFD, amt int64) (int64, error, bool) {
 	if err := dst.writeLock(); err != nil {
 		return 0, err, true
 	}
+	defer dst.writeUnlock()
 	if err := src.readLock(); err != nil {
-		dst.writeUnlock()
 		return 0, err, true
 	}
+	defer src.readUnlock()
 
-	// TODO(pmh/maybe): maintain a
-	// free-list of pipes to prevent
-	// constant opening/closing of fds
 	var sp splicePipe
 	if err := sp.init(amt); err != nil {
-		dst.writeUnlock()
-		src.readUnlock()
-
 		// In the event that pipe2 isn't
 		// supported, bail out.
 		return 0, err, err != syscall.ENOSYS
@@ -70,8 +65,6 @@ func splice(dst *netFD, src *netFD, amt int64) (int64, error, bool) {
 	if err != nil {
 		err = os.NewSyscallError("splice", err)
 	}
-	dst.writeUnlock()
-	src.readUnlock()
 	closerr := sp.destroy()
 	if err == nil {
 		err = closerr
@@ -80,7 +73,7 @@ func splice(dst *netFD, src *netFD, amt int64) (int64, error, bool) {
 }
 
 type splicePipe struct {
-	toread  int64 // bytes to read: 0 if done, <0 if unlimited
+	toread  int64 // bytes to read (<0 if unlimited)
 	written int64 // bytes written
 	rfd     int   // read fd
 	wfd     int   // write fd
@@ -117,22 +110,21 @@ func (s *splicePipe) readFrom(src *netFD) error {
 		return nil
 	}
 
-	// read up to the full buffer
 	amt := pipeBuf - s.inbuf
-	// but don't read past the alloted amt
 	if s.toread > 0 && s.toread < amt {
 		amt = s.toread
 	}
 
 	// we have to differentiate
-	// between blocking on socket read
-	// and pipe write, since both can EAGAIN
+	// between blocking on read(socket)
+	// and write(pipe), since both can
+	// return EAGAIN
 	canRead := false
 read:
 	// The socket->pipe splice *must* be SPLICE_F_NONBLOCK,
 	// because if the pipe write blocks, then we'll deadlock.
-	n, err := syscall.Splice(src.sysfd, nil, s.wfd, nil, int(amt), fSpliceMove|fSpliceNonblock|fSpliceMore)
-	if err == syscall.EAGAIN {
+	n, eno := rawsplice(src.sysfd, s.wfd, int(amt), fSpliceMove|fSpliceMore|fSpliceNonblock)
+	if eno == syscall.EAGAIN {
 		if canRead {
 			// we must be blocking b/c
 			// the pipe is full
@@ -146,13 +138,18 @@ read:
 	}
 
 	// EOF
-	if n == 0 && err == nil {
+	if n == 0 && eno == 0 {
 		if s.toread < 0 {
 			s.toread = 0
 			return nil
 		} else {
 			return io.ErrUnexpectedEOF
 		}
+	}
+
+	var err error
+	if eno != 0 {
+		err = eno
 	}
 
 	s.inbuf += n
@@ -178,14 +175,17 @@ func (s *splicePipe) writeTo(dst *netFD) error {
 	}
 
 write:
-	n, err := syscall.Splice(s.rfd, nil, dst.sysfd, nil, int(s.inbuf), flags)
-	if err == syscall.EAGAIN {
+	n, eno := rawsplice(s.rfd, dst.sysfd, int(s.inbuf), flags)
+	if eno == syscall.EAGAIN {
 		if err := dst.pd.WaitWrite(); err != nil {
 			return err
 		}
 		goto write
 	}
-
+	var err error
+	if eno != 0 {
+		err = eno
+	}
 	s.inbuf -= n
 	s.written += n
 	return err
@@ -198,4 +198,9 @@ func (s *splicePipe) flush(dst *netFD) error {
 		}
 	}
 	return nil
+}
+
+func rawsplice(srcfd int, dstfd int, amt int, flags int) (int64, syscall.Errno) {
+	r, _, e := syscall.RawSyscall6(syscall.SYS_SPLICE, uintptr(srcfd), 0, uintptr(dstfd), 0, uintptr(amt), uintptr(flags))
+	return int64(r), e
 }
