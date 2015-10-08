@@ -282,6 +282,27 @@ loop1:
 		}
 	}
 
+	// excise any CMPQ $0, REG
+	// instructions that occur
+	// immediately after an instruction
+	// that sets the zero flags on REG.
+	var prev *obj.Prog
+	for r := (*gc.Flow)(g.Start); r != nil; r = r.Link {
+		p = r.Prog
+		if prev != nil && iszerocmp(p) {
+			// if the previous instr already set the
+			// zero flag, then excise this instruction.
+			if p.From.Reg == prev.To.Reg && isarith(prev, p.From.Width) {
+				if gc.Debug['v'] != 0 {
+					fmt.Printf("excise %v after %v\n", p, prev)
+				}
+				excise(r)
+				continue
+			}
+		}
+		prev = p
+	}
+
 	// load pipelining
 	// push any load from memory as early as possible
 	// to give it time to complete before use.
@@ -300,6 +321,49 @@ loop1:
 	}
 
 	gc.Flowend(g)
+}
+
+// is this
+//  CMP{L,Q} $0, Rx
+// or
+//  TEST{L,Q} Rx, Rx
+func iszerocmp(p *obj.Prog) bool {
+	switch p.As {
+	case x86.ACMPL, x86.ACMPQ:
+		return p.To.Type == obj.TYPE_CONST && p.To.Offset == 0 && p.From.Type == obj.TYPE_REG
+	case x86.ATESTL, x86.ATESTQ:
+		return p.To.Type == obj.TYPE_REG && p.From.Type == obj.TYPE_REG && p.From.Reg == p.To.Reg
+	}
+	return false
+}
+
+// is this a basic arithmetic instr?
+func isarith(p *obj.Prog, width int64) bool {
+	switch width {
+	case 4:
+		switch p.As {
+		case x86.AADDL,
+			x86.ASUBL,
+			x86.AXORL,
+			x86.AORL,
+			x86.AANDL:
+			return true
+		default:
+			return false
+		}
+	case 8:
+		switch p.As {
+		case x86.AADDQ,
+			x86.ASUBQ,
+			x86.AXORQ,
+			x86.AORQ,
+			x86.AANDQ:
+			return true
+		default:
+			return false
+		}
+	}
+	return false
 }
 
 func pushback(r0 *gc.Flow) {
