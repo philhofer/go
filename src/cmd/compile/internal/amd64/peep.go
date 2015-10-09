@@ -282,6 +282,27 @@ loop1:
 		}
 	}
 
+	// excise any CMPQ $0, REG
+	// instructions that occur
+	// immediately after an instruction
+	// that sets the zero flags on REG.
+	var prev *obj.Prog
+	for r := (*gc.Flow)(g.Start); r != nil; r = r.Link {
+		p = r.Prog
+		if prev != nil && iszerocmp(p) {
+			// if the previous instr already set the
+			// zero flag, then excise this instruction.
+			if p.From.Reg == prev.To.Reg && isarith(prev, p.From.Width) {
+				if gc.Debug['v'] != 0 {
+					fmt.Printf("excise %v after %v\n", p, prev)
+				}
+				excise(r)
+				continue
+			}
+		}
+		prev = p
+	}
+
 	// load pipelining
 	// push any load from memory as early as possible
 	// to give it time to complete before use.
@@ -300,6 +321,87 @@ loop1:
 	}
 
 	gc.Flowend(g)
+}
+
+// is this
+//  CMP{L,Q} $0, Rx
+// or
+//  TEST{L,Q} Rx, Rx
+func iszerocmp(p *obj.Prog) bool {
+	switch p.As {
+	case x86.ACMPB, x86.ACMPW, x86.ACMPL, x86.ACMPQ:
+		return p.To.Type == obj.TYPE_CONST && p.To.Offset == 0 && p.From.Type == obj.TYPE_REG
+	case x86.ATESTB, x86.ATESTW, x86.ATESTL, x86.ATESTQ:
+		return p.To.Type == obj.TYPE_REG && p.From.Type == obj.TYPE_REG && p.From.Reg == p.To.Reg
+	}
+	return false
+}
+
+// is this a basic arithmetic instr?
+func isarith(p *obj.Prog, width int64) bool {
+	switch width {
+	case 8:
+		switch p.As {
+		case x86.AADDQ,
+			x86.ASUBQ,
+			x86.ANEGQ,
+			x86.ASHRQ,
+			x86.ASHLQ,
+			x86.ASALQ,
+			x86.ASARQ,
+			x86.AXORQ,
+			x86.AORQ,
+			x86.AANDQ:
+			return true
+		}
+		// special case: 32-bit arithmetic
+		// will end up setting the same flags.
+		fallthrough
+	case 4:
+		switch p.As {
+		case x86.AADDL,
+			x86.ASUBL,
+			x86.AXORL,
+			x86.AORL,
+			x86.ASARL,
+			x86.ASALL,
+			x86.ASHRL,
+			x86.ASHLL,
+			x86.ANEGL,
+			x86.AANDL:
+			return true
+		}
+	case 2:
+		switch p.As {
+		case x86.AADDW,
+			x86.ASUBW,
+			x86.AXORW,
+			x86.AORW,
+			x86.ASARW,
+			x86.ASALW,
+			x86.ASHRW,
+			x86.ASHLW,
+			x86.ANEGW,
+			x86.AANDW:
+			return true
+		}
+	case 1:
+		switch p.As {
+		case x86.AADDB,
+			x86.ASUBB,
+			x86.AXORB,
+			x86.AORB,
+			x86.ASARB,
+			x86.ASALB,
+			x86.ASHRB,
+			x86.ASHLB,
+			x86.ANEGB,
+			x86.AANDB:
+			return true
+		}
+
+	}
+	return false
 }
 
 func pushback(r0 *gc.Flow) {
