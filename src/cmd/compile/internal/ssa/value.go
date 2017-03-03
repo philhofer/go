@@ -311,3 +311,16 @@ func (v *Value) RegName() string {
 	}
 	return reg.(*Register).name
 }
+
+// MemoryArg returns the memory argument for the Value, if there is one.
+func (v *Value) MemoryArg() *Value {
+	na := len(v.Args)
+	if na == 0 {
+		return nil
+	}
+	if m := v.Args[na-1]; m.Type.IsMemory() ||
+		(v.Op == OpSelect1 && m.Type.FieldType(1).IsMemory()) {
+		return m
+	}
+	return nil
+}
