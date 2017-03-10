@@ -103,4 +103,5 @@ var (
 	TypeBool       = &TypeImpl{Size_: 1, Align: 1, Boolean: true, Name: "bool"}
 	TypeBytePtr    = &TypeImpl{Size_: 8, Align: 8, Ptr: true, Name: "*byte"}
 	TypeInt64Ptr   = &TypeImpl{Size_: 8, Align: 8, Ptr: true, Name: "*int64"}
+	TypeFloat64Ptr = &TypeImpl{Size_: 8, Align: 8, Ptr: true, Name: "*float64", Elem_: TypeFloat64}
 )

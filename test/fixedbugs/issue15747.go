@@ -17,12 +17,17 @@ type T struct{ M string }
 
 var b bool
 
+//go:noinline
+func use(v *[]byte) { // ERROR "live at entry to use: v$"
+	global = v
+}
+
 func f1(q *Q, xx []byte) interface{} { // ERROR "live at call to newobject: xx$" "live at call to writebarrierptr: &xx$" "live at entry to f1: xx$"
 	// xx was copied from the stack to the heap on the previous line:
 	// xx was live for the first two prints but then it switched to &xx
 	// being live. We should not see plain xx again.
 	if b {
-		global = &xx // ERROR "live at call to writebarrierptr: &xx$"
+		use(&xx) // ERROR "live at call to use: &xx$"
 	}
 	xx, _, err := f2(xx, 5) // ERROR "live at call to f2: &xx$" "live at call to writebarrierptr: err.data err.type$"
 	if err != nil {

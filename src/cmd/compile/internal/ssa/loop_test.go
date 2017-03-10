@@ -48,7 +48,7 @@ func TestLoopConditionS390X(t *testing.T) {
 		Bloc("entry",
 			Valu("mem", OpInitMem, TypeMem, 0, nil),
 			Valu("SP", OpSP, TypeUInt64, 0, nil),
-			Valu("ret", OpAddr, TypeInt64Ptr, 0, nil, "SP"),
+			Valu("ret", OpAddr, TypeInt64Ptr, 0, c.fe.Auto(TypeInt64Ptr), "SP"),
 			Valu("N", OpArg, TypeInt64, 0, c.fe.Auto(TypeInt64)),
 			Valu("starti", OpConst64, TypeInt64, 0, nil),
 			Valu("startsum", OpConst64, TypeInt64, 0, nil),

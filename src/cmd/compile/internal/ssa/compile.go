@@ -345,6 +345,7 @@ var passes = [...]pass{
 	{name: "loopbce", fn: loopbce},
 	{name: "decompose builtin", fn: decomposeBuiltIn, required: true},
 	{name: "dec", fn: dec, required: true},
+	{name: "store forwarding", fn: storeforward},
 	{name: "late opt", fn: opt, required: true}, // TODO: split required rules and optimizing rules
 	{name: "generic deadcode", fn: deadcode},
 	{name: "check bce", fn: checkbce},
@@ -354,6 +355,7 @@ var passes = [...]pass{
 	{name: "insert resched checks", fn: insertLoopReschedChecks,
 		disabled: obj.Preemptibleloops_enabled == 0}, // insert resched checks in loops.
 	{name: "tighten", fn: tighten}, // move values closer to their uses
+	{name: "loadshuffle", fn: loadshuffle},
 	{name: "lower", fn: lower, required: true},
 	{name: "lowered cse", fn: cse},
 	{name: "lowered deadcode", fn: deadcode, required: true},
