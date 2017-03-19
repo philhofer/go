@@ -455,6 +455,118 @@ type Pcln struct {
 	InlTree     InlTree // per-function inlining tree extracted from the global tree
 }
 
+// A SymKind describes the kind of memory represented by a symbol.
+type SymKind int16
+
+// Defined SymKind values.
+//
+// TODO(rsc): Give idiomatic Go names.
+// TODO(rsc): Reduce the number of symbol types in the object files.
+//go:generate stringer -type=SymKind
+const (
+	Sxxx SymKind = iota
+	STEXT
+	SELFRXSECT
+
+	// Read-only sections.
+	STYPE
+	SSTRING
+	SGOSTRING
+	SGOFUNC
+	SGCBITS
+	SRODATA
+	SFUNCTAB
+
+	SELFROSECT
+	SMACHOPLT
+
+	// Read-only sections with relocations.
+	//
+	// Types STYPE-SFUNCTAB above are written to the .rodata section by default.
+	// When linking a shared object, some conceptually "read only" types need to
+	// be written to by relocations and putting them in a section called
+	// ".rodata" interacts poorly with the system linkers. The GNU linkers
+	// support this situation by arranging for sections of the name
+	// ".data.rel.ro.XXX" to be mprotected read only by the dynamic linker after
+	// relocations have applied, so when the Go linker is creating a shared
+	// object it checks all objects of the above types and bumps any object that
+	// has a relocation to it to the corresponding type below, which are then
+	// written to sections with appropriate magic names.
+	STYPERELRO
+	SSTRINGRELRO
+	SGOSTRINGRELRO
+	SGOFUNCRELRO
+	SGCBITSRELRO
+	SRODATARELRO
+	SFUNCTABRELRO
+
+	// Part of .data.rel.ro if it exists, otherwise part of .rodata.
+	STYPELINK
+	SITABLINK
+	SSYMTAB
+	SPCLNTAB
+
+	// Writable sections.
+	SELFSECT
+	SMACHO
+	SMACHOGOT
+	SWINDOWS
+	SELFGOT
+	SNOPTRDATA
+	SINITARR
+	SDATA
+	SBSS
+	SNOPTRBSS
+	STLSBSS
+	SXREF
+	SMACHOSYMSTR
+	SMACHOSYMTAB
+	SMACHOINDIRECTPLT
+	SMACHOINDIRECTGOT
+	SFILE
+	SFILEPATH
+	SCONST
+	SDYNIMPORT
+	SHOSTOBJ
+	SDWARFSECT
+	SDWARFINFO
+	SSUB       = SymKind(1 << 8)
+	SMASK      = SymKind(SSUB - 1)
+	SHIDDEN    = SymKind(1 << 9)
+	SCONTAINER = SymKind(1 << 10) // has a sub-symbol
+)
+
+// ReadOnly are the symbol kinds that form read-only sections. In some
+// cases, if they will require relocations, they are transformed into
+// rel-ro sections using RelROMap.
+var ReadOnly = []SymKind{
+	STYPE,
+	SSTRING,
+	SGOSTRING,
+	SGOFUNC,
+	SGCBITS,
+	SRODATA,
+	SFUNCTAB,
+}
+
+// RelROMap describes the transformation of read-only symbols to rel-ro
+// symbols.
+var RelROMap = map[SymKind]SymKind{
+	STYPE:     STYPERELRO,
+	SSTRING:   SSTRINGRELRO,
+	SGOSTRING: SGOSTRINGRELRO,
+	SGOFUNC:   SGOFUNCRELRO,
+	SGCBITS:   SGCBITSRELRO,
+	SRODATA:   SRODATARELRO,
+	SFUNCTAB:  SFUNCTABRELRO,
+}
+
+// IsReadOnly reports whether this symbol kind lives in read-only memory
+// from the perspective of a running Go program.
+func (s SymKind) IsReadOnly() bool {
+	return s <= SPCLNTAB && s != Sxxx
+}
+
 type Reloc struct {
 	Off  int32
 	Siz  uint8

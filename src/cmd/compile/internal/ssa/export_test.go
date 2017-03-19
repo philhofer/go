@@ -164,7 +164,7 @@ func init() {
 		{4, types.TINT32},
 		{4, types.TUINT32},
 		{4, types.TFLOAT32},
-		{4, types.TFLOAT64},
+		{8, types.TFLOAT64},
 		{8, types.TUINT64},
 		{8, types.TINT64},
 		{8, types.TINT},

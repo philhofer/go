@@ -135,6 +135,9 @@ func buildssa(fn *Node, worker int) *ssa.Func {
 	if fn.Func.Pragma&Nosplit != 0 {
 		s.f.NoSplit = true
 	}
+	if fn.Func.Pragma&CgoUnsafeArgs != 0 {
+		s.f.CgoUnsafeArgs = true
+	}
 	defer func() {
 		if s.f.WBPos.IsKnown() {
 			fn.Func.WBPos = s.f.WBPos
