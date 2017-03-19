@@ -514,6 +514,12 @@ var RelROMap = map[SymKind]SymKind{
 	SFUNCTAB:  SFUNCTABRELRO,
 }
 
+// IsReadOnly reports whether this symbol kind lives in read-only memory
+// from the perspective of a running Go program.
+func (s SymKind) IsReadOnly() bool {
+	return s <= SPCLNTAB && s != Sxxx
+}
+
 type Reloc struct {
 	Off  int32
 	Siz  uint8
