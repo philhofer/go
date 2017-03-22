@@ -40,6 +40,8 @@ type Func struct {
 	NoWB  bool     // write barrier is not allowed
 	WBPos src.XPos // line number of first write barrier
 
+	CgoUnsafeArgs bool // indicates the presence of go:cgo_unsafe_args
+
 	// when register allocation is done, maps value ids to locations
 	RegAlloc []Location
 

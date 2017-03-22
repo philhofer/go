@@ -27,5 +27,5 @@ func G() {
 
 func H() {
 	var v int                                // ERROR "moved to heap"
-	F2(0, 1, uintptr(unsafe.Pointer(&v)), 2) // ERROR "live at call to newobject: .?autotmp" "live at call to F2: .?autotmp" "escapes to heap"
+	F2(0, 1, uintptr(unsafe.Pointer(&v)), 2) // ERROR "live at call to newobject: &v .?autotmp" "live at call to F2: .?autotmp" "escapes to heap"
 }

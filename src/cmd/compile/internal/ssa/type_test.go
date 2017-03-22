@@ -94,6 +94,7 @@ var (
 	TypeInt64      = &TypeImpl{Size_: 8, Align: 8, Integer: true, Signed: true, Name: "int64"}
 	TypeFloat32    = &TypeImpl{Size_: 4, Align: 4, Float: true, Name: "float32"}
 	TypeFloat64    = &TypeImpl{Size_: 8, Align: 8, Float: true, Name: "float64"}
+	TypeFloat64Ptr = &TypeImpl{Size_: 8, Align: 8, Ptr: true, Elem_: TypeFloat64, Name: "*float64"}
 	TypeComplex64  = &TypeImpl{Size_: 8, Align: 4, Complex: true, Name: "complex64"}
 	TypeComplex128 = &TypeImpl{Size_: 16, Align: 8, Complex: true, Name: "complex128"}
 	TypeUInt8      = &TypeImpl{Size_: 1, Align: 1, Integer: true, Name: "uint8"}

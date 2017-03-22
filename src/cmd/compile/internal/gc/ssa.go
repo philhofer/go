@@ -91,6 +91,9 @@ func buildssa(fn *Node) *ssa.Func {
 	if fn.Func.Pragma&Nowritebarrier != 0 {
 		s.f.NoWB = true
 	}
+	if fn.Func.Pragma&CgoUnsafeArgs != 0 {
+		s.f.CgoUnsafeArgs = true
+	}
 	defer func() {
 		if s.f.WBPos.IsKnown() {
 			fn.Func.WBPos = s.f.WBPos

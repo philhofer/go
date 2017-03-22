@@ -78,6 +78,9 @@ type ptrinfo struct {
 }
 
 func (a *aliasAnalysis) infoFor(v *Value) *ptrinfo {
+	if int(v.ID) >= len(a.idinfo) {
+		return nil
+	}
 	idx := a.idinfo[v.ID] - 1
 	if idx < 0 {
 		return nil
@@ -185,8 +188,19 @@ func isheap(v *Value, ptrsize int64) (ID, bool) {
 }
 
 func (aa *aliasAnalysis) init(f *Func) {
+	if f.CgoUnsafeArgs {
+		// cgocall does crazy stuff like have
+		// callees overwrite stack slots for
+		// return values; it's tough to make
+		// correct alias analysis decisions
+		// under those conditions
+		*aa = aliasAnalysis{}
+		return
+	}
+
 	aa.idinfo = make([]int32, f.NumValues())
 	aa.info = make([]ptrinfo, 0, 20)
+	aa.partitions = 0
 
 	// guard against symbols being matched more than once
 	sympart := make(map[interface{}]ID)
@@ -244,7 +258,8 @@ func (aa *aliasAnalysis) init(f *Func) {
 		for _, v := range b.Values {
 			if v.Type.IsMemory() && len(v.Args) > 1 {
 				switch v.Op {
-				case OpVarDef, OpVarKill, OpVarLive, OpPhi, OpKeepAlive, OpZero, OpZeroWB:
+				case OpVarDef, OpVarKill, OpVarLive,
+					OpKeepAlive, OpZero, OpZeroWB:
 					continue
 				default:
 					// expect the value to be in arg1; look for
@@ -258,6 +273,12 @@ func (aa *aliasAnalysis) init(f *Func) {
 				// conservatively treat Convert like a store
 				if v.Args[0].Type.IsPtrShaped() {
 					aa.escape(v.Args[0])
+				}
+			} else if v.Op == OpPhi && v.Type.IsPtrShaped() {
+				// a Phi can produce a pointer that
+				// aliases any of its inputs
+				for _, a := range v.Args {
+					aa.escape(a)
 				}
 			}
 		}
@@ -374,12 +395,12 @@ func (a *aliasAnalysis) phialias(b *Value, bwidth int64, c *Value, cwidth int64)
 	if b.Op == OpPhi {
 		bvalues = b.Args
 	} else {
-		bvalues = []*Value{b.Args[0]}
+		bvalues = []*Value{b}
 	}
 	if c.Op == OpPhi {
 		cvalues = c.Args
 	} else {
-		cvalues = []*Value{c.Args[0]}
+		cvalues = []*Value{c}
 	}
 
 	if len(bvalues)+len(cvalues) <= 2 {
@@ -387,14 +408,18 @@ func (a *aliasAnalysis) phialias(b *Value, bwidth int64, c *Value, cwidth int64)
 	}
 
 	// give up if we see another Phi
-	for _, bv := range bvalues {
-		if bv.Op == OpPhi {
-			return mayAlias
+	if len(bvalues) > 1 {
+		for _, bv := range bvalues {
+			if bv.Op == OpPhi {
+				return mayAlias
+			}
 		}
 	}
-	for _, cv := range cvalues {
-		if cv.Op == OpPhi {
-			return mayAlias
+	if len(cvalues) > 1 {
+		for _, cv := range cvalues {
+			if cv.Op == OpPhi {
+				return mayAlias
+			}
 		}
 	}
 
@@ -496,9 +521,9 @@ func (a *aliasAnalysis) clobbers(mem, load *Value) bool {
 	if info.call {
 		return !noalias || base.Op == OpSP
 	}
-	// atomics clobber everything except noalias pointers
+	// atomics clobber everything
 	if info.hasSideEffects || mem.Type.IsTuple() {
-		return !noalias
+		return true
 	}
 	// at this point, mem must be a store operation
 	return a.alias(mem.Args[0], ptrwidth(mem), load.Args[0], ptrwidth(load)) != mustNotAlias

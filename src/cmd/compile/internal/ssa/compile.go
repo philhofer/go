@@ -345,6 +345,7 @@ var passes = [...]pass{
 	{name: "loopbce", fn: loopbce},
 	{name: "decompose builtin", fn: decomposeBuiltIn, required: true},
 	{name: "dec", fn: dec, required: true},
+	{name: "loadelim", fn: loadelim},
 	{name: "late opt", fn: opt, required: true}, // TODO: split required rules and optimizing rules
 	{name: "generic deadcode", fn: deadcode},
 	{name: "check bce", fn: checkbce},
