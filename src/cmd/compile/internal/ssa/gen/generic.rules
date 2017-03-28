@@ -234,6 +234,56 @@
 (NeqB (ConstBool [0]) x) -> x
 (NeqB (ConstBool [1]) x) -> (Not x)
 
+(Eq64 (Const64 [c]) (Const64 [d])) -> (ConstBool [b2i(c == d)])
+(Eq32 (Const32 [c]) (Const32 [d])) -> (ConstBool [b2i(c == d)])
+(Eq16 (Const16 [c]) (Const16 [d])) -> (ConstBool [b2i(c == d)])
+(Eq8  (Const8  [c]) (Const8  [d])) -> (ConstBool [b2i(c == d)])
+
+(Neq64 (Const64 [c]) (Const64 [d])) -> (ConstBool [b2i(c != d)])
+(Neq32 (Const32 [c]) (Const32 [d])) -> (ConstBool [b2i(c != d)])
+(Neq16 (Const16 [c]) (Const16 [d])) -> (ConstBool [b2i(c != d)])
+(Neq8  (Const8  [c]) (Const8  [d])) -> (ConstBool [b2i(c != d)])
+
+(Greater64 (Const64 [c]) (Const64 [d])) -> (ConstBool [b2i(c > d)])
+(Greater32 (Const32 [c]) (Const32 [d])) -> (ConstBool [b2i(int32(c) > int32(d))])
+(Greater16 (Const16 [c]) (Const16 [d])) -> (ConstBool [b2i(int16(c) > int16(d))])
+(Greater8  (Const8  [c]) (Const8  [d])) -> (ConstBool [b2i(int8(c) > int8(d))])
+
+(Less64 (Const64 [c]) (Const64 [d])) -> (ConstBool [b2i(c < d)])
+(Less32 (Const32 [c]) (Const32 [d])) -> (ConstBool [b2i(int32(c) < int32(d))])
+(Less16 (Const16 [c]) (Const16 [d])) -> (ConstBool [b2i(int16(c) < int16(d))])
+(Less8  (Const8  [c]) (Const8  [d])) -> (ConstBool [b2i(int8(c) < int8(d))])
+
+(Less64U (Const64 [c]) (Const64 [d])) -> (ConstBool [b2i(uint64(c) < uint64(d))])
+(Less32U (Const32 [c]) (Const32 [d])) -> (ConstBool [b2i(uint32(c) < uint32(d))])
+(Less16U (Const16 [c]) (Const16 [d])) -> (ConstBool [b2i(uint16(c) < uint16(d))])
+(Less8U  (Const8  [c]) (Const8  [d])) -> (ConstBool [b2i(uint8(c) < uint8(d))])
+
+(Greater64U (Const64 [c]) (Const64 [d])) -> (ConstBool [b2i(uint64(c) > uint64(d))])
+(Greater32U (Const32 [c]) (Const32 [d])) -> (ConstBool [b2i(uint32(c) > uint32(d))])
+(Greater16U (Const16 [c]) (Const16 [d])) -> (ConstBool [b2i(uint16(c) > uint16(d))])
+(Greater8U  (Const8  [c]) (Const8  [d])) -> (ConstBool [b2i(uint8(c) > uint8(d))])
+
+(Geq64 (Const64 [c]) (Const64 [d])) -> (ConstBool [b2i(c >= d)])
+(Geq32 (Const32 [c]) (Const32 [d])) -> (ConstBool [b2i(int32(c) >= int32(d))])
+(Geq16 (Const16 [c]) (Const16 [d])) -> (ConstBool [b2i(int16(c) >= int16(d))])
+(Geq8  (Const8  [c]) (Const8  [d])) -> (ConstBool [b2i(int8(c) >= int8(d))])
+
+(Geq64U (Const64 [c]) (Const64 [d])) -> (ConstBool [b2i(uint64(c) >= uint64(d))])
+(Geq32U (Const32 [c]) (Const32 [d])) -> (ConstBool [b2i(uint32(c) >= uint32(d))])
+(Geq16U (Const16 [c]) (Const16 [d])) -> (ConstBool [b2i(uint16(c) >= uint16(d))])
+(Geq8U  (Const8  [c]) (Const8  [d])) -> (ConstBool [b2i(uint8(c) >= uint8(d))])
+
+(Leq64 (Const64 [c]) (Const64 [d])) -> (ConstBool [b2i(c <= d)])
+(Leq32 (Const32 [c]) (Const32 [d])) -> (ConstBool [b2i(int32(c) <= int32(d))])
+(Leq16 (Const16 [c]) (Const16 [d])) -> (ConstBool [b2i(int16(c) <= int16(d))])
+(Leq8  (Const8  [c]) (Const8  [d])) -> (ConstBool [b2i(int8(c) <= int8(d))])
+
+(Leq64U (Const64 [c]) (Const64 [d])) -> (ConstBool [b2i(uint64(c) <= uint64(d))])
+(Leq32U (Const32 [c]) (Const32 [d])) -> (ConstBool [b2i(uint32(c) <= uint32(d))])
+(Leq16U (Const16 [c]) (Const16 [d])) -> (ConstBool [b2i(uint16(c) <= uint16(d))])
+(Leq8U  (Const8  [c]) (Const8  [d])) -> (ConstBool [b2i(uint8(c) <= uint8(d))])
+
 (Eq64 (Const64 <t> [c]) (Add64 (Const64 <t> [d]) x)) -> (Eq64 (Const64 <t> [c-d]) x)
 (Eq32 (Const32 <t> [c]) (Add32 (Const32 <t> [d]) x)) -> (Eq32 (Const32 <t> [int64(int32(c-d))]) x)
 (Eq16 (Const16 <t> [c]) (Add16 (Const16 <t> [d]) x)) -> (Eq16 (Const16 <t> [int64(int16(c-d))]) x)
