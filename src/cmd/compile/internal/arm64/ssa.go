@@ -545,15 +545,14 @@ func ssaGenValue(s *gc.SSAGenState, v *ssa.Value) {
 		p.From.Reg = v.Args[0].Reg()
 		p.To.Type = obj.TYPE_REG
 		p.To.Reg = v.Reg()
-	case ssa.OpARM64CSELULT,
-		ssa.OpARM64CSELULT0:
+	case ssa.OpARM64CSEL, ssa.OpARM64CSEL0:
 		r1 := int16(arm64.REGZERO)
-		if v.Op == ssa.OpARM64CSELULT {
+		if v.Op != ssa.OpARM64CSEL0 {
 			r1 = v.Args[1].Reg()
 		}
 		p := s.Prog(v.Op.Asm())
 		p.From.Type = obj.TYPE_REG // assembler encodes conditional bits in Reg
-		p.From.Reg = arm64.COND_LO
+		p.From.Reg = condBits[v.Aux.(ssa.Op)]
 		p.Reg = v.Args[0].Reg()
 		p.From3 = &obj.Addr{Type: obj.TYPE_REG, Reg: r1}
 		p.To.Type = obj.TYPE_REG

@@ -1497,6 +1497,19 @@ var linuxARM64Tests = []*asmTest{
 		`,
 		[]string{"\tMOVD\t\"\"\\.a\\+[0-9]+\\(FP\\), R[0-9]+", "\tMOVD\tR[0-9]+, \"\"\\.b\\+[0-9]+\\(FP\\)"},
 	},
+	{
+		// make sure that CSEL is emitted for conditional moves
+		`
+		func f37(c int) int {
+		     x := c + 4
+		     if c < 0 {
+		     	x = 182
+		     }
+		     return x
+		}
+		`,
+		[]string{"\tCSEL\t"},
+	},
 }
 
 var linuxMIPSTests = []*asmTest{

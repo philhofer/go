@@ -165,6 +165,8 @@ func (v *Value) auxString() string {
 			s = fmt.Sprintf(" {%v}", v.Aux)
 		}
 		return s + fmt.Sprintf(" [%s]", v.AuxValAndOff())
+	case auxCCop:
+		return fmt.Sprintf(" {%s}", v.Aux.(Op))
 	}
 	return ""
 }
