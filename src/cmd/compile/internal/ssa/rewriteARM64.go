@@ -60,9 +60,15 @@ func rewriteValueARM64(v *Value) bool {
 	case OpARM64CMPshiftRL:
 		return rewriteValueARM64_OpARM64CMPshiftRL_0(v)
 	case OpARM64CSEL:
-		return rewriteValueARM64_OpARM64CSEL_0(v)
+		return rewriteValueARM64_OpARM64CSEL_0(v) || rewriteValueARM64_OpARM64CSEL_10(v)
 	case OpARM64CSEL0:
 		return rewriteValueARM64_OpARM64CSEL0_0(v)
+	case OpARM64CSINC:
+		return rewriteValueARM64_OpARM64CSINC_0(v)
+	case OpARM64CSINV:
+		return rewriteValueARM64_OpARM64CSINV_0(v)
+	case OpARM64CSNEG:
+		return rewriteValueARM64_OpARM64CSNEG_0(v)
 	case OpARM64DIV:
 		return rewriteValueARM64_OpARM64DIV_0(v)
 	case OpARM64DIVW:
@@ -2648,6 +2654,135 @@ func rewriteValueARM64_OpARM64CSEL_0(v *Value) bool {
 		v.AddArg(flagArg(bool))
 		return true
 	}
+	// match: (CSEL {cc} x (ADDconst [1] y) flag)
+	// cond:
+	// result: (CSINC {cc} x y flag)
+	for {
+		cc := v.Aux
+		_ = v.Args[2]
+		x := v.Args[0]
+		v_1 := v.Args[1]
+		if v_1.Op != OpARM64ADDconst {
+			break
+		}
+		if v_1.AuxInt != 1 {
+			break
+		}
+		y := v_1.Args[0]
+		flag := v.Args[2]
+		v.reset(OpARM64CSINC)
+		v.Aux = cc
+		v.AddArg(x)
+		v.AddArg(y)
+		v.AddArg(flag)
+		return true
+	}
+	// match: (CSEL {cc} (ADDconst [1] x) y flag)
+	// cond:
+	// result: (CSINC {arm64Negate(cc.(Op))} y x flag)
+	for {
+		cc := v.Aux
+		_ = v.Args[2]
+		v_0 := v.Args[0]
+		if v_0.Op != OpARM64ADDconst {
+			break
+		}
+		if v_0.AuxInt != 1 {
+			break
+		}
+		x := v_0.Args[0]
+		y := v.Args[1]
+		flag := v.Args[2]
+		v.reset(OpARM64CSINC)
+		v.Aux = arm64Negate(cc.(Op))
+		v.AddArg(y)
+		v.AddArg(x)
+		v.AddArg(flag)
+		return true
+	}
+	// match: (CSEL {cc} x (MVN y) flag)
+	// cond:
+	// result: (CSINV {cc} x y flag)
+	for {
+		cc := v.Aux
+		_ = v.Args[2]
+		x := v.Args[0]
+		v_1 := v.Args[1]
+		if v_1.Op != OpARM64MVN {
+			break
+		}
+		y := v_1.Args[0]
+		flag := v.Args[2]
+		v.reset(OpARM64CSINV)
+		v.Aux = cc
+		v.AddArg(x)
+		v.AddArg(y)
+		v.AddArg(flag)
+		return true
+	}
+	return false
+}
+func rewriteValueARM64_OpARM64CSEL_10(v *Value) bool {
+	// match: (CSEL {cc} (MVN x) y flag)
+	// cond:
+	// result: (CSINV {arm64Negate(cc.(Op))} y x flag)
+	for {
+		cc := v.Aux
+		_ = v.Args[2]
+		v_0 := v.Args[0]
+		if v_0.Op != OpARM64MVN {
+			break
+		}
+		x := v_0.Args[0]
+		y := v.Args[1]
+		flag := v.Args[2]
+		v.reset(OpARM64CSINV)
+		v.Aux = arm64Negate(cc.(Op))
+		v.AddArg(y)
+		v.AddArg(x)
+		v.AddArg(flag)
+		return true
+	}
+	// match: (CSEL {cc} x (NEG y) flag)
+	// cond:
+	// result: (CSNEG {cc} x y flag)
+	for {
+		cc := v.Aux
+		_ = v.Args[2]
+		x := v.Args[0]
+		v_1 := v.Args[1]
+		if v_1.Op != OpARM64NEG {
+			break
+		}
+		y := v_1.Args[0]
+		flag := v.Args[2]
+		v.reset(OpARM64CSNEG)
+		v.Aux = cc
+		v.AddArg(x)
+		v.AddArg(y)
+		v.AddArg(flag)
+		return true
+	}
+	// match: (CSEL {cc} (NEG y) x flag)
+	// cond:
+	// result: (CSNEG {arm64Negate(cc.(Op))} y x flag)
+	for {
+		cc := v.Aux
+		_ = v.Args[2]
+		v_0 := v.Args[0]
+		if v_0.Op != OpARM64NEG {
+			break
+		}
+		y := v_0.Args[0]
+		x := v.Args[1]
+		flag := v.Args[2]
+		v.reset(OpARM64CSNEG)
+		v.Aux = arm64Negate(cc.(Op))
+		v.AddArg(y)
+		v.AddArg(x)
+		v.AddArg(flag)
+		return true
+	}
 	return false
 }
 func rewriteValueARM64_OpARM64CSEL0_0(v *Value) bool {
@@ -2745,6 +2880,75 @@ func rewriteValueARM64_OpARM64CSEL0_0(v *Value) bool {
 		v.Aux = arm64Negate(bool.Op)
 		v.AddArg(x)
 		v.AddArg(flagArg(bool))
+		return true
+	}
+	return false
+}
+func rewriteValueARM64_OpARM64CSINC_0(v *Value) bool {
+	// match: (CSINC {cc} x y (InvertFlags cmp))
+	// cond:
+	// result: (CSINC {arm64Invert(cc.(Op))} x y cmp)
+	for {
+		cc := v.Aux
+		_ = v.Args[2]
+		x := v.Args[0]
+		y := v.Args[1]
+		v_2 := v.Args[2]
+		if v_2.Op != OpARM64InvertFlags {
+			break
+		}
+		cmp := v_2.Args[0]
+		v.reset(OpARM64CSINC)
+		v.Aux = arm64Invert(cc.(Op))
+		v.AddArg(x)
+		v.AddArg(y)
+		v.AddArg(cmp)
+		return true
+	}
+	return false
+}
+func rewriteValueARM64_OpARM64CSINV_0(v *Value) bool {
+	// match: (CSINV {cc} x y (InvertFlags cmp))
+	// cond:
+	// result: (CSINV {arm64Invert(cc.(Op))} x y cmp)
+	for {
+		cc := v.Aux
+		_ = v.Args[2]
+		x := v.Args[0]
+		y := v.Args[1]
+		v_2 := v.Args[2]
+		if v_2.Op != OpARM64InvertFlags {
+			break
+		}
+		cmp := v_2.Args[0]
+		v.reset(OpARM64CSINV)
+		v.Aux = arm64Invert(cc.(Op))
+		v.AddArg(x)
+		v.AddArg(y)
+		v.AddArg(cmp)
+		return true
+	}
+	return false
+}
+func rewriteValueARM64_OpARM64CSNEG_0(v *Value) bool {
+	// match: (CSNEG {cc} x y (InvertFlags cmp))
+	// cond:
+	// result: (CSNEG {arm64Invert(cc.(Op))} x y cmp)
+	for {
+		cc := v.Aux
+		_ = v.Args[2]
+		x := v.Args[0]
+		y := v.Args[1]
+		v_2 := v.Args[2]
+		if v_2.Op != OpARM64InvertFlags {
+			break
+		}
+		cmp := v_2.Args[0]
+		v.reset(OpARM64CSNEG)
+		v.Aux = arm64Invert(cc.(Op))
+		v.AddArg(x)
+		v.AddArg(y)
+		v.AddArg(cmp)
 		return true
 	}
 	return false

@@ -965,8 +965,11 @@
 (EQ (InvertFlags cmp) yes no) -> (EQ cmp yes no)
 (NE (InvertFlags cmp) yes no) -> (NE cmp yes no)
 
-// absorb InvertFlags into CSEL(0)
+// absorb InvertFlags into conditional instructions
 (CSEL {cc} x y (InvertFlags cmp)) -> (CSEL {arm64Invert(cc.(Op))} x y cmp)
+(CSINC {cc} x y (InvertFlags cmp)) -> (CSINC {arm64Invert(cc.(Op))} x y cmp)
+(CSNEG {cc} x y (InvertFlags cmp)) -> (CSNEG {arm64Invert(cc.(Op))} x y cmp)
+(CSINV {cc} x y (InvertFlags cmp)) -> (CSINV {arm64Invert(cc.(Op))} x y cmp)
 (CSEL0 {cc} x (InvertFlags cmp)) -> (CSEL0 {arm64Invert(cc.(Op))} x cmp)
 
 // absorb flag constants into boolean values
@@ -1057,6 +1060,14 @@
       (CSEL0 {bool.Op} x flagArg(bool))
 (CSEL0 {cc} x (CMPWconst [0] bool)) && cc.(Op) == OpARM64Equal && flagArg(bool) != nil ->
       (CSEL0 {arm64Negate(bool.Op)} x flagArg(bool))
+
+// absorb arithmetic into conditional instructions
+(CSEL {cc} x (ADDconst [1] y) flag) -> (CSINC {cc} x y flag)
+(CSEL {cc} (ADDconst [1] x) y flag) -> (CSINC {arm64Negate(cc.(Op))} y x flag)
+(CSEL {cc} x (MVN y) flag) -> (CSINV {cc} x y flag)
+(CSEL {cc} (MVN x) y flag) -> (CSINV {arm64Negate(cc.(Op))} y x flag)
+(CSEL {cc} x (NEG y) flag) -> (CSNEG {cc} x y flag)
+(CSEL {cc} (NEG y) x flag) -> (CSNEG {arm64Negate(cc.(Op))} y x flag)
 
 // absorb shifts into ops
 (ADD x (SLLconst [c] y)) -> (ADDshiftLL x y [c])
