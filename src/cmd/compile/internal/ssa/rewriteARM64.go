@@ -5775,6 +5775,78 @@ func rewriteValueARM64_OpARM64MOVDstore_0(v *Value) bool {
 		v.AddArg(mem)
 		return true
 	}
+	// match: (MOVDstore [off1] {s} ptr1 val1 j:(MOVDstore [off0] {s} ptr0 val0 mem))
+	// cond: isSamePtr(ptr0,ptr1) 	   && mergePoint(b,v,j) != nil 	   && j.Uses == 1 	   && off1 == off0+8 && is32Bit(off1) 	   && clobber(j)
+	// result: @mergePoint(b,v,j) (STP [off0] {s} ptr0 val0 val1 mem)
+	for {
+		off1 := v.AuxInt
+		s := v.Aux
+		_ = v.Args[2]
+		ptr1 := v.Args[0]
+		val1 := v.Args[1]
+		j := v.Args[2]
+		if j.Op != OpARM64MOVDstore {
+			break
+		}
+		off0 := j.AuxInt
+		if j.Aux != s {
+			break
+		}
+		_ = j.Args[2]
+		ptr0 := j.Args[0]
+		val0 := j.Args[1]
+		mem := j.Args[2]
+		if !(isSamePtr(ptr0, ptr1) && mergePoint(b, v, j) != nil && j.Uses == 1 && off1 == off0+8 && is32Bit(off1) && clobber(j)) {
+			break
+		}
+		b = mergePoint(b, v, j)
+		v0 := b.NewValue0(v.Pos, OpARM64STP, types.TypeMem)
+		v.reset(OpCopy)
+		v.AddArg(v0)
+		v0.AuxInt = off0
+		v0.Aux = s
+		v0.AddArg(ptr0)
+		v0.AddArg(val0)
+		v0.AddArg(val1)
+		v0.AddArg(mem)
+		return true
+	}
+	// match: (MOVDstore [off1] {s} ptr1 val1 j:(MOVDstore [off0] {s} ptr0 val0 mem))
+	// cond: isSamePtr(ptr0,ptr1) 	   && mergePoint(b,v,j) != nil 	   && j.Uses == 1 	   && off0 == off1+8 && is32Bit(off0) 	   && clobber(j)
+	// result: @mergePoint(b,v,j) (STP [off1] {s} ptr0 val1 val0 mem)
+	for {
+		off1 := v.AuxInt
+		s := v.Aux
+		_ = v.Args[2]
+		ptr1 := v.Args[0]
+		val1 := v.Args[1]
+		j := v.Args[2]
+		if j.Op != OpARM64MOVDstore {
+			break
+		}
+		off0 := j.AuxInt
+		if j.Aux != s {
+			break
+		}
+		_ = j.Args[2]
+		ptr0 := j.Args[0]
+		val0 := j.Args[1]
+		mem := j.Args[2]
+		if !(isSamePtr(ptr0, ptr1) && mergePoint(b, v, j) != nil && j.Uses == 1 && off0 == off1+8 && is32Bit(off0) && clobber(j)) {
+			break
+		}
+		b = mergePoint(b, v, j)
+		v0 := b.NewValue0(v.Pos, OpARM64STP, types.TypeMem)
+		v.reset(OpCopy)
+		v.AddArg(v0)
+		v0.AuxInt = off1
+		v0.Aux = s
+		v0.AddArg(ptr0)
+		v0.AddArg(val1)
+		v0.AddArg(val0)
+		v0.AddArg(mem)
+		return true
+	}
 	// match: (MOVDstore [off1] {sym1} (MOVDaddr [off2] {sym2} ptr) val mem)
 	// cond: canMergeSym(sym1,sym2) && is32Bit(off1+off2) && (ptr.Op != OpSB || !config.ctxt.Flag_shared)
 	// result: (MOVDstore [off1+off2] {mergeSym(sym1,sym2)} ptr val mem)

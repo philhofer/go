@@ -628,6 +628,22 @@
 	&& (ptr.Op != OpSB || !config.ctxt.Flag_shared) ->
 	(MOVQstorezero [off1+off2] {sym} ptr mem)
 
+(MOVDstore [off1] {s} ptr1 val1 j:(MOVDstore [off0] {s} ptr0 val0 mem))
+	&& isSamePtr(ptr0,ptr1)
+	&& mergePoint(b,v,j) != nil
+	&& j.Uses == 1
+	&& off1 == off0+8 && is32Bit(off1)
+	&& clobber(j) ->
+	@mergePoint(b,v,j) (STP [off0] {s} ptr0 val0 val1 mem)
+
+(MOVDstore [off1] {s} ptr1 val1 j:(MOVDstore [off0] {s} ptr0 val0 mem))
+	&& isSamePtr(ptr0,ptr1)
+	&& mergePoint(b,v,j) != nil
+	&& j.Uses == 1
+	&& off0 == off1+8 && is32Bit(off0)
+	&& clobber(j) ->
+	@mergePoint(b,v,j) (STP [off1] {s} ptr0 val1 val0 mem)
+
 (MOVBload [off1] {sym1} (MOVDaddr [off2] {sym2} ptr) mem)
 	&& canMergeSym(sym1,sym2) && is32Bit(off1+off2)
 	&& (ptr.Op != OpSB || !config.ctxt.Flag_shared) ->

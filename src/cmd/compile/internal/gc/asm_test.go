@@ -2688,7 +2688,16 @@ var linuxARM64Tests = []*asmTest{
 			return
 		}
 		`,
-		pos: []string{"\tMOVD\t\"\"\\.a\\+[0-9]+\\(FP\\), R[0-9]+", "\tMOVD\tR[0-9]+, \"\"\\.b\\+[0-9]+\\(FP\\)"},
+		pos: []string{"\tMOVD\t\"\"\\.a\\+[0-9]+\\(FP\\), R[0-9]+", "\tSTP\t\\(R[0-9]+, R[0-9]+\\), \"\"\\.b\\+[0-9]+\\(FP\\)"},
+	},
+	{
+		// check that adjacent stores are merged
+		fn: `
+		func $(a *[2]int64, x, y int64) {
+			a[0], a[1] = x, y
+		}
+		`,
+		pos: []string{"\tSTP\t\\(R[0-9]+, R[0-9]+\\), ([0-9]+)?\\(R[0-9]+\\)"},
 	},
 	{
 		// check that stack store is optimized away
